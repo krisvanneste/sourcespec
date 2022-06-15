@@ -912,6 +912,7 @@ def read_traces(config):
     paz_dict = _read_paz(config.paz)
 
     hypo = picks = None
+    hypoG = picksG = None
     # parse hypocenter file
     if config.options.hypo_file is not None:
         hypo, picks = _parse_hypo_file(config.options.hypo_file)
@@ -921,6 +922,8 @@ def read_traces(config):
     # parse QML file
     if config.options.qml_file is not None:
         hypo, picks = _parse_qml(config.options.qml_file, config.options.evid)
+    if config.options.greenqml_file is not None:
+        hypoG, picksG = _parse_qml(config.options.greenqml_file, config.options.evid)  
 
     # finally, read traces
     # traces can be defined in a pickle catalog...
@@ -1027,3 +1030,6 @@ def read_traces(config):
 
     st.sort()
     return st
+
+def new_func(config):
+    return config.options.greenqml_file
