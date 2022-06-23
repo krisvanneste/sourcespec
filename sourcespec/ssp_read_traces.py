@@ -902,64 +902,28 @@ def _build_filelist(path, filelist, tmpdir):
             filelist.append(path)
 # -----------------------------------------------------------------------------
 
+def add_evid(st, hypo):
+    """adds event id to trace metadata (trace.stats.evid)"""
+    for trace in st:
+        #reads evid from quakeml file and adds it to metadata
+         trace.stats.__setattr__('evid', hypo.evid)
+    return st
 
-# Public interface:
-def read_traces(config):
-    """Read traces, store waveforms and metadata."""
-    # read metadata
-    metadata = _read_metadata(config.station_metadata)
-    # read PAZ (normally this is an alternative to dataless)
-    paz_dict = _read_paz(config.paz)
-
-    hypo = picks = None
-    hypoG = picksG = None
-    # parse hypocenter file
-    if config.options.hypo_file is not None:
-        hypo, picks = _parse_hypo_file(config.options.hypo_file)
-    # parse pick file
-    if config.options.pick_file is not None:
-        picks = _parse_hypo71_picks(config)
-    # parse QML file
-    if config.options.qml_file is not None:
-        hypo, picks = _parse_qml(config.options.qml_file, config.options.evid)
-    if config.options.greenqml_file is not None:
-        hypoG, picksG = _parse_qml(config.options.greenqml_file, config.options.evid)  
-
-    # finally, read traces
-    # traces can be defined in a pickle catalog...
-    if config.pickle_catalog:
-        sys.path.append(config.pickle_classpath)
-        with open(config.pickle_catalog, 'rb') as fp:
-            catalog = pickle.load(fp)
-        event = [ev for ev in catalog if ev.event_id == config.options.evid][0]
-        hypo = _parse_hypocenter_from_event(event)
-        st = Stream()
-        for trace in event.traces:
-            if config.options.station is not None:
-                if not trace.station == config.options.station:
-                    continue
-            try:
-                tmpst = read(trace.trace_file, fsize=False)
-            except Exception as err:
-                logger.error(err)
-                continue
-            for trace in tmpst.traces:
-                st.append(trace)
-                _add_paz_and_coords(trace, metadata, paz_dict, config)
-                _add_hypocenter(trace, hypo)
-                _add_picks(trace, picks)  # FIXME: actually add picks!
-                # _add_instrtype(trace)
-                trace.stats.instrtype = 'acc'  # FIXME
-    # ...or in standard files supported by obspy.read()
-    else:
-        logger.info('Reading traces...')
+def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
+    # specify the list of the input trace files or directories in the 
+    # event_path argument. Both config.options.trace_path (for event)
+    # and config.options.green_path (for green function) can be 
+    # specified in the event_path argument.
+     
+    # read traces in standard files supported by obspy.read()
+    logger.info('Reading traces...')
         # phase 1: build a file list
         # ph 1.1: create a temporary dir and run '_build_filelist()'
         #         to move files to it and extract all tar archives
-        tmpdir = tempfile.mkdtemp()
-        filelist = []
-        for trace_path in config.options.trace_path:
-            _build_filelist(trace_path, filelist, tmpdir)
+    tmpdir = tempfile.mkdtemp()
+    filelist = []
+    for trace_path in event_path:
+        _build_filelist(trace_path, filelist, tmpdir)
         # ph 1.2: rerun '_build_filelist()' in tmpdir to add to the
         #         filelist all the extraceted files
         listing = os.listdir(tmpdir)
@@ -1001,7 +965,63 @@ def read_traces(config):
                     continue
                 st.append(trace)
 
-        shutil.rmtree(tmpdir)
+
+
+        shutil.rmtree(tmpdir)   
+    return st
+
+#-----------------------------------------------------------------------------------------------------------
+# Public interface:
+def read_traces(config):
+    """Read traces, store waveforms and metadata."""
+    # read metadata
+    metadata = _read_metadata(config.station_metadata)
+    # read PAZ (normally this is an alternative to dataless)
+    paz_dict = _read_paz(config.paz)
+
+    hypo = picks = None
+    hypoG = picksG = None
+    # parse hypocenter file
+    if config.options.hypo_file is not None:
+        hypo, picks = _parse_hypo_file(config.options.hypo_file)
+    # parse pick file
+    if config.options.pick_file is not None:
+        picks = _parse_hypo71_picks(config)
+    # parse QML file
+    if config.options.qml_file is not None:
+        hypo, picks = _parse_qml(config.options.qml_file, config.options.evid)
+    # parse Green function-related QML file    
+    if config.options.greenqml_file is not None:
+        hypoG, picksG = _parse_qml(config.options.greenqml_file, config.options.evid)  
+
+    # finally, read traces
+    # traces can be defined in a pickle catalog...
+    if config.pickle_catalog:
+        sys.path.append(config.pickle_classpath)
+        with open(config.pickle_catalog, 'rb') as fp:
+            catalog = pickle.load(fp)
+        event = [ev for ev in catalog if ev.event_id == config.options.evid][0]
+        hypo = _parse_hypocenter_from_event(event)
+        st = Stream()
+        for trace in event.traces:
+            if config.options.station is not None:
+                if not trace.station == config.options.station:
+                    continue
+            try:
+                tmpst = read(trace.trace_file, fsize=False)
+            except Exception as err:
+                logger.error(err)
+                continue
+            for trace in tmpst.traces:
+                st.append(trace)
+                _add_paz_and_coords(trace, metadata, paz_dict, config)
+                _add_hypocenter(trace, hypo)
+                _add_picks(trace, picks)  # FIXME: actually add picks!
+                # _add_instrtype(trace)
+                trace.stats.instrtype = 'acc'  # FIXME
+    # ...or in standard files supported by obspy.read()
+    else:
+        st = _trace_path(config, config.options.trace_path, metadata, paz_dict, hypo, picks)
 
     logger.info('Reading traces: done')
     if len(st.traces) == 0:
@@ -1028,8 +1048,32 @@ def read_traces(config):
     # add hypo to config file
     config.hypo = hypo
 
-    st.sort()
-    return st
+    #if green function traces are available, read traces
+    if config.options.green_path is not None:
+        logger.info('Green function traces available')
+        #read green function traces and adds it to a stream
+        st_green =\
+             _trace_path(config, config.options.green_path, metadata, paz_dict, hypoG, picksG)
+        
+        logger.info('Reading green function traces: done')
+        if len(st_green.traces) == 0:
+            logger.info('No green function trace loaded')  
+            ssp_exit()   
+        
+        _complete_picks(st_green)     
+        
+        #add event id as trace.stats.evid attribute at event traces
+        st = add_evid(st,hypo)
+        #add event id as trace.stats.evid attribute at green function traces
+        st_green = add_evid(st_green, hypoG)
+        #print(st_green[0].stats)
+        
+        #add green function to the main stream object
+        #Traces of the main event and of the green function
+        #are identified by evid metadata in the stream  
+        st = st + st_green
 
-def new_func(config):
-    return config.options.greenqml_file
+
+    st.sort()
+    ssp_exit()
+    return st
