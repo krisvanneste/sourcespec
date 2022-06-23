@@ -565,7 +565,7 @@ def _parse_qml(qml_file, evid=None):
     hypo.origin_time = origin.time
     hypo.latitude = origin.latitude
     hypo.longitude = origin.longitude
-    hypo.depth = origin.depth/1000.
+    hypo.depth = origin.depth / 1000.
     hypo.evid = ev.resource_id.id.split('/')[-1].split('=')[-1]
 
     # See if there is a focal mechanism with nodal planes
@@ -902,24 +902,26 @@ def _build_filelist(path, filelist, tmpdir):
             filelist.append(path)
 # -----------------------------------------------------------------------------
 
+
 def add_evid(st, hypo):
     """adds event id to trace metadata (trace.stats.evid)"""
     for trace in st:
-        #reads evid from quakeml file and adds it to metadata
-         trace.stats.__setattr__('evid', hypo.evid)
+        # reads evid from quakeml file and adds it to metadata
+        trace.stats.__setattr__('evid', hypo.evid)
     return st
 
+
 def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
-    # specify the list of the input trace files or directories in the 
+    # specify the list of the input trace files or directories in the
     # event_path argument. Both config.options.trace_path (for event)
-    # and config.options.green_path (for green function) can be 
+    # and config.options.green_path (for green function) can be
     # specified in the event_path argument.
-     
+
     # read traces in standard files supported by obspy.read()
     logger.info('Reading traces...')
-        # phase 1: build a file list
-        # ph 1.1: create a temporary dir and run '_build_filelist()'
-        #         to move files to it and extract all tar archives
+    # phase 1: build a file list
+    # ph 1.1: create a temporary dir and run '_build_filelist()'
+    #         to move files to it and extract all tar archives
     tmpdir = tempfile.mkdtemp()
     filelist = []
     for trace_path in event_path:
@@ -965,12 +967,12 @@ def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
                     continue
                 st.append(trace)
 
-
-
-        shutil.rmtree(tmpdir)   
+        shutil.rmtree(tmpdir)
     return st
 
-#-----------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
+
 # Public interface:
 def read_traces(config):
     """Read traces, store waveforms and metadata."""
@@ -990,9 +992,9 @@ def read_traces(config):
     # parse QML file
     if config.options.qml_file is not None:
         hypo, picks = _parse_qml(config.options.qml_file, config.options.evid)
-    # parse Green function-related QML file    
+    # parse Green function-related QML file
     if config.options.greenqml_file is not None:
-        hypoG, picksG = _parse_qml(config.options.greenqml_file, config.options.evid)  
+        hypoG, picksG = _parse_qml(config.options.greenqml_file, config.options.evid)
 
     # finally, read traces
     # traces can be defined in a pickle catalog...
@@ -1048,31 +1050,26 @@ def read_traces(config):
     # add hypo to config file
     config.hypo = hypo
 
-    #if green function traces are available, read traces
+    # if green function traces are available, read traces
     if config.options.green_path is not None:
         logger.info('Green function traces available')
-        #read green function traces and adds it to a stream
+        # read green function traces and adds it to a stream
         st_green =\
-             _trace_path(config, config.options.green_path, metadata, paz_dict, hypoG, picksG)
-        
+            _trace_path(config, config.options.green_path, metadata, paz_dict, hypoG, picksG)
+
         logger.info('Reading green function traces: done')
         if len(st_green.traces) == 0:
-            logger.info('No green function trace loaded')  
-            ssp_exit()   
-        
-        _complete_picks(st_green)     
-        
-        #add event id as trace.stats.evid attribute at event traces
+            logger.info('No green function trace loaded')
+            ssp_exit()
+        _complete_picks(st_green)
+        # add event id as trace.stats.evid attribute at event traces
         st = add_evid(st,hypo)
-        #add event id as trace.stats.evid attribute at green function traces
+        # add event id as trace.stats.evid attribute at green function traces
         st_green = add_evid(st_green, hypoG)
-        #print(st_green[0].stats)
-        
-        #add green function to the main stream object
-        #Traces of the main event and of the green function
-        #are identified by evid metadata in the stream  
+        # add green function to the main stream object
+        # Traces of the main event and of the green function
+        # are identified by evid metadata in the stream
         st = st + st_green
-
 
     st.sort()
     ssp_exit()
