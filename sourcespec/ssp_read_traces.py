@@ -1049,7 +1049,9 @@ def read_traces(config):
     _hypo_vel(hypo, config)
     # add hypo to config file
     config.hypo = hypo
-
+    # add hypoG to config file (if does exits)
+    if hypoG is not None:
+        config.hypoG = hypoG
     # if green function traces are available, read traces
     if config.options.green_path is not None:
         logger.info('Green function traces available')
@@ -1063,7 +1065,7 @@ def read_traces(config):
             ssp_exit()
         _complete_picks(st_green)
         # add event id as trace.stats.evid attribute at event traces
-        st = add_evid(st,hypo)
+        st = add_evid(st, hypo)
         # add event id as trace.stats.evid attribute at green function traces
         st_green = add_evid(st_green, hypoG)
         # add green function to the main stream object
