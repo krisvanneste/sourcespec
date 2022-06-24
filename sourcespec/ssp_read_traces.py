@@ -900,15 +900,6 @@ def _build_filelist(path, filelist, tmpdir):
             tar.close()
         else:
             filelist.append(path)
-# -----------------------------------------------------------------------------
-
-
-def add_evid(st, hypo):
-    """adds event id to trace metadata (trace.stats.evid)"""
-    for trace in st:
-        # reads evid from quakeml file and adds it to metadata
-        trace.stats.__setattr__('evid', hypo.evid)
-    return st
 
 
 def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
@@ -973,7 +964,6 @@ def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
 # -------------------------------------------------------------------------------
 
 
-# Public interface:
 def read_traces(config):
     """Read traces, store waveforms and metadata."""
     # read metadata
@@ -1064,15 +1054,8 @@ def read_traces(config):
             logger.info('No green function trace loaded')
             ssp_exit()
         _complete_picks(st_green)
-        # add event id as trace.stats.evid attribute at event traces
-        st = add_evid(st, hypo)
-        # add event id as trace.stats.evid attribute at green function traces
-        st_green = add_evid(st_green, hypoG)
-        # add green function to the main stream object
-        # Traces of the main event and of the green function
-        # are identified by evid metadata in the stream
+        # add green function traces to event stream
         st = st + st_green
 
     st.sort()
-    ssp_exit()
     return st
