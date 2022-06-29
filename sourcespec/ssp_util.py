@@ -17,6 +17,7 @@ import math
 import numpy as np
 from obspy.signal.invsim import cosine_taper as _cos_taper
 from obspy.geodetics import gps2dist_azimuth, kilometers2degrees
+from obspy import Stream
 logger = logging.getLogger(__name__.split('.')[-1])
 
 
@@ -75,6 +76,15 @@ def get_vel(lon, lat, depth, wave, config):
         slow_len = grd.get_value(lon, lat, depth)
         vel = grd.dx / slow_len
     return vel
+
+
+def select_evid(st, evid):
+    "Select trace from stream based on the event id stored in the hypo metadata"
+    out_st = Stream()
+    for trace in st:
+        if trace.stats.hypo.evid == evid:
+            out_st.append(trace)
+    return out_st
 # -----------------------------------------------------------------------------
 
 
