@@ -19,7 +19,7 @@ import numpy as np
 import re
 from obspy.core import Stream
 from sourcespec.ssp_setup import ssp_exit
-from sourcespec.ssp_util import remove_instr_response, hypo_dist
+from sourcespec.ssp_util import remove_instr_response, hypo_dist, select_evid
 from sourcespec.ssp_wave_arrival import add_arrivals_to_trace
 logger = logging.getLogger(__name__.split('.')[-1])
 
@@ -79,7 +79,7 @@ def _check_clipping(config, trace):
     # Clipped samples are in the last bin
     nclips = hist[-1]
     clip_max_percent = config.clip_max_percent
-    if nclips/npts > clip_max_percent/100.:
+    if nclips / npts > clip_max_percent / 100.:
         msg = (
             '{} {}: Trace is clipped for more than {:.2f}% '
             'skipping trace'.format(
@@ -115,7 +115,7 @@ def _check_sn_ratio(config, trace):
         msg = '{} {}: empty noise window: skipping trace'
         msg = msg.format(trace.id, trace.stats.instrtype)
         raise RuntimeError(msg)
-    sn_ratio = rmsS/rmsnoise
+    sn_ratio = rmsS / rmsnoise
     logger.info('{} {}: S/N: {:.1f}'.format(
         trace.id, trace.stats.instrtype, sn_ratio))
     trace.stats.sn_ratio = sn_ratio
@@ -142,7 +142,7 @@ def _process_trace(config, trace):
     if not config.options.no_response:
         correct = config.correct_instrumental_response
         bp_freqmin, bp_freqmax = _get_bandpass_frequencies(config, trace)
-        pre_filt = (bp_freqmin, bp_freqmin*1.1, bp_freqmax*0.9, bp_freqmax)
+        pre_filt = (bp_freqmin, bp_freqmin * 1.1, bp_freqmax * 0.9, bp_freqmax)
         if remove_instr_response(trace_process, correct, pre_filt) is None:
             msg = '{} {}: Unable to remove instrument response: '
             msg += 'skipping trace'
@@ -198,7 +198,7 @@ def _merge_stream(config, st):
     overlaps = [g for g in gaps_olaps if g[6] < 0]
     duration = st_cut[-1].stats.endtime - st_cut[0].stats.starttime
     gap_duration = sum(g[6] for g in gaps)
-    if gap_duration > duration/4:
+    if gap_duration > duration / 4:
         msg = '{}: Too many gaps for the selected cut interval: skipping trace'
         msg = msg.format(traceid)
         raise RuntimeError(msg)
@@ -286,7 +286,7 @@ def _skip_ignored(config, id):
             raise RuntimeError(msg)
 
 
-def process_traces(config, st):
+def _process_event_traces(config, st):
     """Remove mean, deconvolve and ignore unwanted components."""
     logger.info('Processing traces...')
     out_st = Stream()
@@ -313,11 +313,30 @@ def process_traces(config, st):
         for id in sorted(set(tr.id[:-1] for tr in out_st)):
             net, sta, loc, chan = id.split('.')
             st_sel = out_st.select(network=net, station=sta,
-                                   location=loc, channel=chan+'?')
+                                   location=loc, channel=chan + '?')
             t0 = max(tr.stats.starttime for tr in st_sel)
             t1 = min(tr.stats.endtime for tr in st_sel)
             st_sel.trim(t0, t1)
             st_sel.rotate('NE->RT')
 
     logger.info('Processing traces: done')
+    return out_st
+
+
+def process_traces(config, st):
+    """Remove mean, deconvolve and ignore unwanted components of
+       both the input event and the green function (if available)"""
+    # gets event id
+    evids = [config.hypo.evid]
+    # gets green function id (if available)
+    if config.hypoG is not None:
+        evids.append(config.hypoG.evid)
+    out_st = Stream()
+    for evid in evids:
+        if evid == config.hypoG.evid:
+            logger.info('Green function traces..')
+        # select traces for each evid
+        st_evid = select_evid(st, evid)
+        # proces traces for each evid
+        out_st = _process_event_traces(config, st_evid)
     return out_st

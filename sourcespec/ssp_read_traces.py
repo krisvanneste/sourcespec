@@ -962,6 +962,7 @@ def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
     return st
 
 # -------------------------------------------------------------------------------
+# Public interface:
 
 
 def read_traces(config):
@@ -1042,6 +1043,9 @@ def read_traces(config):
     # add hypoG to config file (if does exits)
     if hypoG is not None:
         config.hypoG = hypoG
+    else:
+        # else, adding it to config as None
+        config.hypoG = None
     # if green function traces are available, read traces
     if config.options.green_path is not None:
         logger.info('Green function traces available')
