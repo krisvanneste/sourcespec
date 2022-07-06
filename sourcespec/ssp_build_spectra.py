@@ -23,7 +23,7 @@ from scipy.interpolate import interp1d
 from obspy.core import Stream
 from sourcespec import spectrum
 from sourcespec.ssp_setup import ssp_exit
-from sourcespec.ssp_util import smooth, cosine_taper, moment_to_mag, get_vel
+from sourcespec.ssp_util import select_evid, smooth, cosine_taper, moment_to_mag, get_vel
 from sourcespec.ssp_process_traces import filter_trace
 from sourcespec.ssp_correction import station_correction
 from sourcespec.ssp_radiation_pattern import get_radiation_pattern_coefficient
@@ -369,7 +369,7 @@ def _check_spectral_sn_ratio(config, spec, specnoise):
             raise ValueError(msg)
 
 
-def build_spectra(config, st):
+def _build_event_spectra(config, st):
     """
     Build spectra and the spec_st object.
 
@@ -378,7 +378,6 @@ def build_spectra(config, st):
     corrected for instrumental constants, normalized by
     hypocentral distance.
     """
-    logger.info('Building spectra...')
     spec_st = Stream()
     specnoise_st = Stream()
 
@@ -422,10 +421,40 @@ def build_spectra(config, st):
     # build the weight spectrum
     weight_st = _build_weight_st(config, spec_st, specnoise_st)
 
-    logger.info('Building spectra: done')
-    if config.weighting == 'noise':
-        for specnoise in specnoise_st:
-            specnoise.data_mag = moment_to_mag(specnoise.data)
-        return spec_st, specnoise_st, weight_st
-    else:
-        return spec_st
+    for specnoise in specnoise_st:
+        specnoise.data_mag = moment_to_mag(specnoise.data)
+    return spec_st, specnoise_st, weight_st
+
+
+def build_spectra(config, st):
+    """Build spectra for the input event and the Green's function."""
+    # gets event id
+    evids = [config.hypo.evid]
+    # gets green function id (if available)
+    green_id = None
+    if config.hypoG is not None:
+        green_id = config.hypoG.evid
+        evids.append(green_id)
+    out_spec = Stream()
+    out_specnoise = Stream()
+    out_weight = Stream()
+    for evid in evids:
+        if evid == green_id:
+            logger.info("Building Green's function spectra...")
+        else:
+            logger.info('Building spectra...')
+        # select traces for each evid
+        st_evid = select_evid(st, evid)
+        # proces traces for each evid
+        spec_st, specnoise_st, weight_st = _build_event_spectra(config, st_evid)
+        # add the current evid built spectrum to the output stream
+        out_spec += spec_st
+        # add the current evid noise spectrum to the to its output stream
+        out_specnoise += specnoise_st
+        # add the current evid weigh spectrum to the to its output stream
+        out_weight += weight_st
+        if evid == green_id:
+            logger.info("Building Green's function spectra: done")
+        else:
+            logger.info('Building spectra: done')
+    return out_spec, out_specnoise, out_weight
