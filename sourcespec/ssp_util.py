@@ -79,12 +79,8 @@ def get_vel(lon, lat, depth, wave, config):
 
 
 def select_evid(st, evid):
-    "Select trace from stream based on the event id stored in the hypo metadata"
-    out_st = Stream()
-    for trace in st:
-        if trace.stats.hypo.evid == evid:
-            out_st.append(trace)
-    return out_st
+    """Select trace from stream based on the event id in the hypo metadata."""
+    return Stream([tr for tr in st if tr.stats.hypo.evid == evid])
 # -----------------------------------------------------------------------------
 
 
