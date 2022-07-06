@@ -909,7 +909,6 @@ def _trace_path(config, event_path, metadata, paz_dict, hypo, picks):
     # specified in the event_path argument.
 
     # read traces in standard files supported by obspy.read()
-    logger.info('Reading traces...')
     # phase 1: build a file list
     # ph 1.1: create a temporary dir and run '_build_filelist()'
     #         to move files to it and extract all tar archives
@@ -1014,6 +1013,7 @@ def read_traces(config):
                 trace.stats.instrtype = 'acc'  # FIXME
     # ...or in standard files supported by obspy.read()
     else:
+        logger.info('Reading traces...')
         st = _trace_path(config, config.options.trace_path, metadata, paz_dict, hypo, picks)
 
     logger.info('Reading traces: done')
@@ -1041,25 +1041,20 @@ def read_traces(config):
     # add hypo to config file
     config.hypo = hypo
     # add hypoG to config file (if does exits)
-    if hypoG is not None:
-        config.hypoG = hypoG
-    else:
-        # else, adding it to config as None
-        config.hypoG = None
+    config.hypoG = hypoG
     # if green function traces are available, read traces
     if config.options.green_path is not None:
-        logger.info('Green function traces available')
+        logger.info("Reading Green's function traces...")
         # read green function traces and adds it to a stream
         st_green =\
             _trace_path(config, config.options.green_path, metadata, paz_dict, hypoG, picksG)
-
-        logger.info('Reading green function traces: done')
+        logger.info("Reading Green's function traces: done")
         if len(st_green.traces) == 0:
-            logger.info('No green function trace loaded')
+            logger.info("No Green's function trace loaded")
             ssp_exit()
         _complete_picks(st_green)
         # add green function traces to event stream
-        st = st + st_green
+        st += st_green
 
     st.sort()
     return st
