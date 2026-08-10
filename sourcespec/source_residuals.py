@@ -69,9 +69,10 @@ def parse_args():
     parser.add_argument(
         '-w', '--weighting', dest='weighting', action='store_true',
         default=False,
-        help='use spectral weights from the HDF5 file when computing '
-             'mean residuals. Falls back to unweighted mean if weights '
-             'are missing for a given station or spectrum'
+        help='multiply each spectrum by its per-frequency spectral '
+             'weight (confidence-weighted average) when computing '
+             'the mean residual. Falls back to unit weights if '
+             'unavailable'
     )
     parser.add_argument(
         '-y', '--yrange', dest='yrange', nargs=2, type=float,
@@ -238,14 +239,41 @@ def read_residuals(resfiles_dir, runid=None, exclude_subdirs=None):
 
 
 def _compute_station_mean(res_list, weight_by_key, freq_array, use_weights):
-    """Compute the weighted or unweighted mean for a single station."""
+    """
+    Compute the mean residual for a single station.
+
+    For each frequency point, the mean is computed as:
+
+    .. math::
+
+        \\bar{x}(f) = \\frac{1}{N} \\sum_{i=1}^{N} w_i(f) \\, x_i(f)
+
+    where :math:`N` is the number of spectra, :math:`x_i(f)` is the
+    residual value of the i-th spectrum at frequency :math:`f`, and
+    :math:`w_i(f)` is the spectral weight (or 1 if ``use_weights`` is
+    False or no weight is available for the i-th spectrum).
+    NaN residual values are treated as zero.
+
+    Note that this is not a standard weighted mean (which would divide
+    by the sum of weights). Here the denominator is always :math:`N`,
+    so the formula computes a **confidence-weighted average**: each
+    :math:`w_i(f) \\in [0, 1]` is both per-spectrum and per-frequency.
+    As a result:
+
+    - The output can never exceed the standard arithmetic mean
+      (since :math:`w_i(f) \\le 1`).
+    - A spectrum with low weight at a given frequency contributes less
+      to the numerator but still counts toward :math:`N`, penalizing
+      the average for including unreliable data at that frequency.
+    """
     spec_mean = None
     weights_used = False
     for spec in res_list:
         spec_interp = spec.copy()
         spec_interp.interp_data_to_new_freq(freq_array)
-        # norm is 1 where interpolated data_mag is not nan, 0 otherwise
-        norm = (~np.isnan(spec_interp.data_mag)).astype(float)
+        # uniform weight to start with,
+        # will be multiplied by spectral weights if available
+        weight_total = np.ones_like(spec_interp.data_mag)
         if use_weights:
             evid = spec.stats.event.get('event_id')
             key = (spec.id, spec.stats.instrtype, evid)
@@ -253,19 +281,25 @@ def _compute_station_mean(res_list, weight_by_key, freq_array, use_weights):
             if weight_spec is not None:
                 weight_interp = np.interp(
                     freq_array, weight_spec.freq, weight_spec.data)
-                norm *= weight_interp
+                # Sanity check: weights must be in [0, 1]
+                if np.any(weight_interp < 0) or np.any(weight_interp > 1):
+                    print(
+                        f'Warning: {spec.id}: spectral weights outside '
+                        '[0, 1] range, renormalizing'
+                    )
+                    weight_interp = np.clip(weight_interp, 0, None)
+                    weight_interp /= np.max(weight_interp)
+                weight_total *= weight_interp
                 weights_used = True
         # Replace nan data_mag with zeros and apply weights
         spec_interp.data_mag[np.isnan(spec_interp.data_mag)] = 0
-        spec_interp.data_mag *= norm
+        spec_interp.data_mag *= weight_total
         if spec_mean is None:
             spec_mean = spec_interp
-            norm_mean = norm
         else:
             spec_mean.data_mag += spec_interp.data_mag
-            norm_mean += norm
-    norm_mean[norm_mean == 0] = np.nan
-    spec_mean.data_mag /= norm_mean
+    spec_mean.data_mag /= len(res_list)
+    spec_mean.stats.data_type = 'mean_residual'
     spec_mean.data = mag_to_moment(spec_mean.data_mag)
     return spec_mean, weights_used
 
@@ -282,9 +316,11 @@ def compute_mean_residuals(residual_dict, min_spectra=20,
     min_spectra : int
         Minimum number of spectra to compute residuals (default=20).
     use_weights : bool
-        If True, use spectral weights (data_type='weight') when
-        available. Falls back to unweighted mean for spectra or
-        stations without weights (default=False).
+        If True, multiply each residual spectrum by its spectral weight
+        (``data_type='weight'``) before averaging. See
+        :func:`_compute_station_mean` for the formula.
+        Falls back to unit weights for spectra or stations without
+        weight data (default=False).
 
     Returns
     -------
