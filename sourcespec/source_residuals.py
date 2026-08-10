@@ -21,6 +21,8 @@ from argparse import ArgumentParser
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+import matplotlib.colors as mcolors
 from sourcespec._version import get_versions
 from sourcespec.spectrum import read_spectra
 from sourcespec.ssp_util import mag_to_moment
@@ -239,7 +241,7 @@ def read_residuals(resfiles_dir, runid=None, exclude_subdirs=None):
 
 
 def _compute_station_mean(res_list, weight_by_key, freq_array, use_weights):
-    """
+    r"""
     Compute the mean residual for a single station.
 
     For each frequency point, the mean is computed as:
@@ -377,7 +379,8 @@ def compute_mean_residuals(residual_dict, min_spectra=20,
 
 
 def plot_residuals(residual_dict, residual_mean, outdir,
-                   ymin=None, ymax=None, runid=None):
+                   ymin=None, ymax=None, runid=None,
+                   use_weights=False):
     """
     Plot residuals.
 
@@ -398,28 +401,114 @@ def plot_residuals(residual_dict, residual_mean, outdir,
     runid : str
         Run ID, to be shown in title
         (default: None)
+    use_weights : bool
+        If True, color individual residuals by spectral weight using a
+        blue colormap and show a colorbar (default: False).
     """
+    # Compute global axis limits
+    global_fmin = np.inf
+    global_fmax = -np.inf
+    global_ymin = np.inf
+    global_ymax = -np.inf
     for spec_mean in residual_mean:
-        stat_id = spec_mean.id
-        res = residual_dict[stat_id]
-        figurefile = os.path.join(outdir, f'{stat_id}.res.png')
-        fig, ax = plt.subplots(dpi=160)
+        res = residual_dict[spec_mean.id]
         for spec in res:
             if getattr(spec.stats, 'data_type', '') == 'weight':
                 continue
             if not spec.data_mag.size:
                 continue
-            ax.semilogx(spec.freq, spec.data_mag, 'b-', alpha=0.5)
-        ax.semilogx(spec_mean.freq, spec_mean.data_mag, 'r-', linewidth=2)
+            global_fmin = min(global_fmin, spec.freq.min())
+            global_fmax = max(global_fmax, spec.freq.max())
+            global_ymin = min(global_ymin, np.nanmin(spec.data_mag))
+            global_ymax = max(global_ymax, np.nanmax(spec.data_mag))
+    if ymin is None:
+        ymin = global_ymin
+    if ymax is None:
+        ymax = global_ymax
+    # Add 10% padding to frequency range in log space
+    log_range = np.log10(global_fmax / global_fmin)
+    pad_factor = 10 ** (0.05 * log_range)
+    global_fmin /= pad_factor
+    global_fmax *= pad_factor
+
+    for spec_mean in residual_mean:
+        stat_id = spec_mean.id
+        res = residual_dict[stat_id]
+        figurefile = os.path.join(outdir, f'{stat_id}.res.png')
+        fig, ax = plt.subplots(dpi=160)
+
+        # Separate residuals from weights (if any)
+        res_list = [
+            s for s in res
+            if getattr(s.stats, 'data_type', '') != 'weight'
+        ]
+
+        if use_weights:
+            weight_list = [
+                s for s in res
+                if getattr(s.stats, 'data_type', '') == 'weight'
+            ]
+            # Build weight lookup by (id, instrtype, event_id)
+            weight_by_key = {}
+            for w in weight_list:
+                evid = w.stats.event.get('event_id')
+                key = (w.id, w.stats.instrtype, evid)
+                weight_by_key[key] = w
+
+            cmap = mcolors.LinearSegmentedColormap.from_list(
+                'Blues_trunc', plt.cm.Blues(np.linspace(0.25, 1, 256)))
+            norm = mcolors.Normalize(vmin=0, vmax=1)
+            for spec in res_list:
+                if not spec.data_mag.size:
+                    continue
+                evid = spec.stats.event.get('event_id')
+                key = (spec.id, spec.stats.instrtype, evid)
+                weight_spec = weight_by_key.get(key)
+                freqs = spec.freq
+                if weight_spec is not None:
+                    weight = np.interp(
+                        freqs, weight_spec.freq, weight_spec.data)
+                    weight = np.clip(weight, 0, None)
+                    if np.max(weight) > 0:
+                        weight /= np.max(weight)
+                else:
+                    weight = np.ones_like(freqs)
+                points = np.array([freqs, spec.data_mag]).T.reshape(
+                    (-1, 1, 2))
+                segments = np.concatenate(
+                    [points[:-1], points[1:]], axis=1)
+                lc = LineCollection(
+                    segments, cmap=cmap, norm=norm, alpha=0.5,
+                    rasterized=True, zorder=20)
+                lc.set_array(weight)
+                lc.set_linewidth(1.0)
+                ax.add_collection(lc)
+
+            # Colorbar inside the plot frame
+            axins = ax.inset_axes([0.05, 0.08, 0.3, 0.04])
+            cbar = matplotlib.colorbar.ColorbarBase(
+                axins, cmap=cmap, norm=norm, orientation='horizontal')
+            cbar.ax.text(
+                0.5, 0.5, 'Weight', fontsize=8, color='w',
+                ha='center', va='center')
+            cbar.ax.set_xticks([0, 0.5, 1], ['0', '0.5', '1'], size=8)
+        else:
+            for spec in res_list:
+                if not spec.data_mag.size:
+                    continue
+                ax.semilogx(
+                    spec.freq, spec.data_mag, color='#4682B4',
+                    alpha=0.5, linewidth=1.0, zorder=20)
+
+        ax.semilogx(
+            spec_mean.freq, spec_mean.data_mag, 'r-', linewidth=2, zorder=30)
+        ax.set_xlim(global_fmin, global_fmax)
         ax.set_ylim([ymin, ymax])
         ax.grid(
             True, which='both', linestyle='solid', color='#DDDDDD', zorder=0)
         ax.set_xlabel('frequency (Hz)')
         ax.set_ylabel('residual amplitude (obs - synth) in magnitude units')
-        n_res = len(
-            [s for s in res
-             if getattr(s.stats, 'data_type', '') != 'weight']
-        )
+        n_res = len(res_list)
         if runid:
             title = f'{stat_id} – runid: {runid} - {n_res} records'
         else:
@@ -461,7 +550,8 @@ def main():
         ymin, ymax = args.yrange
         plot_residuals(
             residual_dict, residual_mean, outdir,
-            ymin=ymin, ymax=ymax, runid=runid
+            ymin=ymin, ymax=ymax, runid=runid,
+            use_weights=args.weighting
         )
 
     # write the mean residuals (the stations corrections)
