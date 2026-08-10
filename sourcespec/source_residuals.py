@@ -247,7 +247,8 @@ def _compute_station_mean(res_list, weight_by_key, freq_array, use_weights):
         # norm is 1 where interpolated data_mag is not nan, 0 otherwise
         norm = (~np.isnan(spec_interp.data_mag)).astype(float)
         if use_weights:
-            key = (spec.id, spec.stats.instrtype)
+            evid = spec.stats.event.get('event_id')
+            key = (spec.id, spec.stats.instrtype, evid)
             weight_spec = weight_by_key.get(key)
             if weight_spec is not None:
                 weight_interp = np.interp(
@@ -308,10 +309,11 @@ def compute_mean_residuals(residual_dict, min_spectra=20,
             continue
         print(f'Processing station: {stat_id}')
 
-        # Build a lookup for weights by (id, instrtype)
+        # Build a lookup for weights by (id, instrtype, event_id)
         weight_by_key = {}
         for w in weight_list:
-            key = (w.id, w.stats.instrtype)
+            evid = w.stats.event.get('event_id')
+            key = (w.id, w.stats.instrtype, evid)
             weight_by_key[key] = w
 
         freqs_min = [spec.freq.min() for spec in res_list]
