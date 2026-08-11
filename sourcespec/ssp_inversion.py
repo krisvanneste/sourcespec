@@ -793,6 +793,11 @@ def spectral_inversion(config, spec_st, weight_st):
     sspec_output.event_info.latitude = event.hypocenter.latitude.value_in_deg
     sspec_output.event_info.depth_in_km = event.hypocenter.depth.value_in_km
     sspec_output.event_info.origin_time = event.hypocenter.origin_time
+    if event.magnitude.value is not None:
+        sspec_output.event_info.catalog_magnitude = \
+            event.magnitude.value
+        sspec_output.event_info.catalog_magnitude_type = \
+            event.magnitude.mag_type
     sspec_output.event_info.vp_in_km_s = event.hypocenter.vp
     sspec_output.event_info.vs_in_km_s = event.hypocenter.vs
     sspec_output.event_info.rho_in_kg_m3 = event.hypocenter.rho

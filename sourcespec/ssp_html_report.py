@@ -438,6 +438,21 @@ def _add_event_info_to_html(config, replacements):
         '{EVENT_URL_COMMENT_BEGIN}': event_url_comment_begin,
         '{EVENT_URL_COMMENT_END}': event_url_comment_end
     }
+    # Only show Catalog Magnitude if it is defined
+    catalog_mag = config.event.magnitude
+    if catalog_mag.value is not None:
+        catalog_mag_type = catalog_mag.mag_type or 'M'
+        catalog_mag_str = f'{catalog_mag_type} {catalog_mag.value:.1f}'
+        catalog_mag_comment_begin = catalog_mag_comment_end = ''
+    else:
+        catalog_mag_str = ''
+        catalog_mag_comment_begin = '<!--'
+        catalog_mag_comment_end = '-->'
+    replacements |= {
+        '{CATALOG_MAGNITUDE}': catalog_mag_str,
+        '{CATALOG_MAG_COMMENT_BEGIN}': catalog_mag_comment_begin,
+        '{CATALOG_MAG_COMMENT_END}': catalog_mag_comment_end
+    }
     # Only show Event Name if it is not empty
     if evname:
         evname_comment_begin = evname_comment_end = ''

@@ -325,6 +325,8 @@ def _write_events_table(cursor, db_file, sspec_output, config):
     ev_rho = event.hypocenter.rho
     kp = config.kp
     ks = config.ks
+    catalog_mag = event.magnitude.value
+    catalog_mag_type = event.magnitude.mag_type
     event_row = dict(EVENTS_TABLE) | {
         # Event info
         'evid': evid,
@@ -338,6 +340,8 @@ def _write_events_table(cursor, db_file, sspec_output, config):
         'rho': float(ev_rho),
         'kp': kp,
         'ks': ks,
+        'catalog_mag': catalog_mag,
+        'catalog_mag_type': catalog_mag_type,
         # Inversion info
         'wave_type': wave_type,
         # Quality info

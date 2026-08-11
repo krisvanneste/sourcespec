@@ -86,6 +86,8 @@ EVENTS_TABLE = OrderedDict([
     ('rho', 'REAL'),
     ('kp', 'REAL'),
     ('ks', 'REAL'),
+    ('catalog_mag', 'REAL'),
+    ('catalog_mag_type', 'TEXT'),
     ('wave_type', 'TEXT'),
     ('n_input_stations', 'INTEGER'),
     ('n_input_spectra', 'INTEGER'),
