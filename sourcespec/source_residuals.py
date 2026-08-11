@@ -552,8 +552,10 @@ def _plot_residuals(
 # ---- MAIN
 
 
-def main():
-    """Main function."""
+def run_source_residuals():
+    """
+    Run source_residuals
+    """
     args = _parse_args()
     runid = args.runid
     exclude_subdirs = args.exclude_subdirs
@@ -597,6 +599,15 @@ def main():
         )
     residual_mean.write(res_mean_file, format='HDF5')
     print(f'Mean station residuals saved to: {res_mean_file}')
+
+
+def main():
+    """Main function."""
+    try:
+        run_source_residuals()
+    except KeyboardInterrupt:
+        print('\nInterrupted by user')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
