@@ -718,6 +718,7 @@ class Spectrum():
         nn = last_group_number + 1
         spec_group_name = _make_spectrum_group_name(nn, self.id)
         self._write_to_hdf5_group(main_group.create_group(spec_group_name))
+        fp.flush()
         fp.close()
 
     def _write_text(self, filename, append=False):
@@ -866,6 +867,7 @@ class SpectrumStream(list):
                 spec_group_name = _make_spectrum_group_name(nn, spectrum.id)
                 spec_group = main_group.create_group(spec_group_name)
                 spectrum.write(filename, format='HDF5', hdf5_group=spec_group)
+            fp.flush()
 
 
 # ---- Reading/writing functions and helper functions ----
