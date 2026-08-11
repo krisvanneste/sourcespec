@@ -107,14 +107,17 @@ previous versions. You will need to upgrade your old database manually or using
   - `--exclude` to exclude 1 or more subfolders when parsing residuals files
     (see [#68])
   - `--yrange` to specify a fixed range for the Y axis in the plots (see [#68])
-  - `--weighting` (`-w`) to compute weighted mean residuals using spectral
-     weights stored in the HDF5 file. Falls back to unweighted mean when
-     weights are missing
+  - `--weighting` (`-w`) to compute confidence-weighted average residuals
+    using per-frequency spectral weights stored in the HDF5 file. Individual
+    residual curves are color-coded by weight. Falls back to unit weights
+    when weights are missing
 
 ### Plotting
 
 - New plot: raw traces
 - Stacked spectra: color spectral curves according to the weighting function
+- `source_residuals`: individual residual curves color-coded by spectral
+  weight (blue colormap), uniform axis limits across stations
 - Spectral plots: show information on the reason why a fit failed
 - Spectral plots: add "ignored" next to the S/N ratio if the spectrum is
   ignored because of a S/N ratio too low or impossible to compute
