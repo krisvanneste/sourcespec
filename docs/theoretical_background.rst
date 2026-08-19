@@ -103,77 +103,110 @@ where:
 
 Geometrical spreading
 ---------------------
-The geometrical spreading coefficient :math:`\mathcal{G}(r)` can be defined,
-for local and regional distances, in one of the following ways (see the
-``geom_spred_model`` option in :ref:`configuration_file:Configuration File`):
 
-- :math:`\mathcal{G}(r) = r^n`: :math:`n` can be any positive number.
-  :math:`n=1` (default value) is the theoretical value for a body wave in a
-  homogeneous full-space;
-  :math:`n=0.5` is the theoretical value for a surface wave in a homogeneous
-  half-space.
+The geometrical spreading coefficient :math:`\mathcal{G}(r)` accounts for
+amplitude loss with distance and is applied as a multiplicative correction to
+the spectra. The model is selected with the ``geom_spred_model`` option in
+:ref:`configuration_file:Configuration File`, with the following options
+available:
 
-- Following :cite:t:`Boatwright2002` (eq. 8), to account for the mixture of
-  body waves, Lg waves and surface waves at regional distances
-  (:math:`r < 200 km`), a two-part geometrical spreading coefficient:
+* Power-law spreading (``r_power_n``):
+    :math:`\mathcal{G}(r) = r^n`, where :math:`n` can be any positive number.
+    The exponent :math:`n` is specified with the
+    ``geom_spread_n_exponent`` option. The default value, :math:`n=1`, is the
+    theoretical value for a body wave propagating in a homogeneous full-space;
+    :math:`n=0.5` is the theoretical value for a surface wave propagating in a
+    homogeneous half-space.
+* Boatwright geometrical spreading (``boatwright``):
+    Following :cite:t:`Boatwright2002`, his model uses :math:`r` spreading for
+    hypocentral distances below a user-defined cutoff distance, and
+    frequency-dependent spreading above the cutoff. The cutoff distance is
+    specified with the ``geom_spread_cutoff_distance`` option. This model can
+    be appropriate for regional distances (typically up to about 200 km), where
+    body waves, Lg waves, and surface waves can contribute to the observed
+    signal. See :ref:`boatwright-geometrical-spreading` for details.
+* Teleseismic geometrical spreading (``teleseismic``):
+    Following :cite:t:`Okal1992`, this model describes the geometrical
+    spreading of teleseismic body waves in a spherically symmetric Earth.
+    It does not require any additional configuration parameter. See
+    :ref:`teleseismic-geometrical-spreading` for details. Note that this model
+    may not be appropriate for very deep events.
 
-  - body wave spreading (:math:`\mathcal{G}(r) = r`) for hypocentral distances
-    below a cutoff distance :math:`r_0`;
-  - frequency dependent spreading for hypocentral distances above the
-    cutoff distance :math:`r_0`.
+.. _boatwright-geometrical-spreading:
 
-More precisely, the expression derived from :cite:t:`Boatwright2002` is:
+Boatwright geometrical spreading
+++++++++++++++++++++++++++++++++
+
+Following :cite:t:`Boatwright2002` (eq. 8), the geometrical spreading
+coefficient is defined as:
 
 .. math::
 
   \mathcal{G}(r) =
   \begin{cases}
     r  &  r \le r_0\\
-    r_0 (r/r_0)^{\gamma (f)}  &  r > r_0
+    r_0 (r/r_0)^{\gamma(f)}  &  r > r_0
   \end{cases}
 
-with
+where :math:`r_0` is the user-defined cutoff distance and the
+frequency-dependent exponent :math:`\gamma(f)` is:
 
 .. math::
 
-  \gamma (f) =
+  \gamma(f) =
   \begin{cases}
-    0.5  &  f \le 0.20 Hz\\
-    0.5 + 2 \log_{10} (5f)  &  0.20 < f < 0.25 Hz\\
-    0.7  &  f \ge 0.25 Hz\\
+    0.5  &  f \le 0.20\,\mathrm{Hz}\\
+    0.5 + 2 \log_{10}(5f)  &  0.20 < f < 0.25\,\mathrm{Hz}\\
+    0.7  &  f \ge 0.25\,\mathrm{Hz}.
   \end{cases}
 
-Note that here we use the square root of eq. 8 in :cite:t:`Boatwright2002`,
-since we correct the spectral amplitude and not the energy.
+The expression above corresponds to the square root of eq. 8 in
+:cite:t:`Boatwright2002`, because the correction is applied to spectral
+amplitude rather than to energy.
 
-For teleseismic distances (see the option
-``geom_spread_min_teleseismic_distance``
-in :ref:`configuration_file:Configuration File`), the geometrical spreading
-coefficient is defined as in :cite:t:`Okal1992` (eq. 4):
+.. _teleseismic-geometrical-spreading:
 
-.. math::
+Teleseismic geometrical spreading
++++++++++++++++++++++++++++++++++
 
-   \mathcal{G}(\Delta) = \frac{a}{g(\Delta)}
-
-where :math:`\Delta` is the great circle distance between the source and the
-receiver, :math:`a` is the Earth radius and :math:`g(\Delta)` is defined as:
+For teleseismic distances, the geometrical spreading coefficient is defined
+following :cite:t:`Okal1992` (eq. 4):
 
 .. math::
 
-   g(\Delta) = \left(
-      \frac{\rho_h c_h}{\rho_r c_r}
-      \frac{\sin i_h}{\sin \Delta}
-      \frac{1}{\cos i_r}
-      \left| \frac{d i_h}{d \Delta} \right|
-   \right)^{1/2}
+  \mathcal{G}(\Delta) = \frac{a}{g(\Delta)}
 
-where :math:`\rho_h` and :math:`\rho_r` are the medium densities at the
-hypocenter and at the receiver, respectively, :math:`c_h` and :math:`c_r` are
-the P- or S-wave velocities at the hypocenter and at the receiver,
-respectively, :math:`i_h` and :math:`i_r` are the takeoff angle (hypocenter) and
-the incidence angle (receiver), respectively,
-and :math:`\frac{d i_h}{d \Delta}` is the variation of the takeoff angle within
-a ray tube of width :math:`\Delta` (see :cite:t:`Okal1992` for details).
+where :math:`\Delta` is the source-receiver great-circle distance, :math:`a`
+is the Earth radius, and :math:`g(\Delta)` is given by:
+
+.. math::
+
+  g(\Delta) = \left(
+    \frac{\rho_h c_h}{\rho_r c_r}
+    \frac{\sin i_h}{\sin \Delta}
+    \frac{1}{\cos i_r}
+    \left| \frac{d i_h}{d \Delta} \right|
+  \right)^{1/2}
+
+Here, :math:`\rho_h` and :math:`\rho_r` are the medium densities at the
+hypocenter and receiver, respectively, and :math:`c_h` and :math:`c_r` are
+the corresponding P- or S-wave velocities. The angles :math:`i_h` and
+:math:`i_r` denote the takeoff angle at the hypocenter and the incidence
+angle at the receiver, respectively. Finally,
+:math:`d i_h / d\Delta` is the derivative of the takeoff angle with respect to
+the source-receiver angular distance, which describes the geometrical
+divergence of the ray tube (see :cite:t:`Okal1992` for details).
+
+For each source depth and seismic phase, the spreading curve is computed once
+as a function of :math:`\Delta` and then interpolated at the distance of each
+receiver. The takeoff-angle derivative is numerically differentiated and
+smoothed to reduce the effect of numerical noise and outliers before
+computing the spreading coefficient.
+
+The teleseismic model assumes a spherically symmetric Earth and is intended
+for teleseismic body waves; when selected, it is applied to all stations for
+which it can be evaluated, with no distance threshold. Its applicability to
+very deep events should be treated with caution.
 
 Building spectra
 ================

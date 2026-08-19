@@ -77,6 +77,13 @@ previous versions. You will need to upgrade your old database manually or using
 - New option `r_power_n_segmented` for the `geom_spread_model` config parameter
   to use a segmented geometrical spreading model with different powers for
   different distance ranges
+- Improved the teleseismic geometrical spreading model (Okal, 1992):
+  corrected the spreading formula to use the full density–velocity ratio and
+  takeoff-angle derivative, and made the derivative more robust using
+  Savitzky–Golay filtering, despiking, and smoothing in log space.
+  The spreading curve is now precomputed once per source depth and phase,
+  then interpolated for each station. The model no longer has a minimum
+  distance threshold: it is either applied to all stations or not used at all.
 - New config parameter `refine_theoretical_arrivals` to refine the
   theoretical P and S arrival times using a simple autopicker based on the
   smoothed envelope of the trace
@@ -153,6 +160,9 @@ previous versions. You will need to upgrade your old database manually or using
 - Improved documentation for the `win_length` parameter
 - New option `r_power_n_segmented` for the `geom_spread_model` config parameter
 - New config parameters: `geom_spread_n_exponents`, `geom_spread_n_distances`
+- Config option `geom_spread_min_teleseismic_distance` removed.
+  The `teleseismic` spreading model is now available as an option of the
+  `geom_spread_model` config parameter
 - New config parameters: `refine_theoretical_arrivals`, `autopick_freqmin`,
   `autopick_debug_plot`
 - New config parameter `clipping_min_amplitude_ratio`

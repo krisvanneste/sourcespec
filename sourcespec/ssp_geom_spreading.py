@@ -11,10 +11,6 @@ Functions to compute geometrical spreading coefficients.
 """
 import logging
 import numpy as np
-from obspy.taup import TauPyModel
-from sourcespec.ssp_util import MediumProperties
-model = TauPyModel(model='iasp91')
-v_model = model.model.s_mod.v_mod
 logger = logging.getLogger(__name__.rsplit('.', maxsplit=1)[-1])
 
 
@@ -66,7 +62,7 @@ def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
     for n in range(1, len(hinge_distances)):
         Rn, pn = hinge_distances[n], exponents[n]
         idxs = hypo_dist_in_km > Rn
-        Z[idxs] = Zhinges[n-1] * ((Rn / hypo_dist_in_km[idxs]) ** pn)
+        Z[idxs] = Zhinges[n - 1] * ((Rn / hypo_dist_in_km[idxs]) ** pn)
     # Convert spreading correction to metric distance
     Z *= 1e3
     if is_scalar:
@@ -106,7 +102,7 @@ def _boatwright_above_cutoff_dist(freqs, cutoff_dist, dist):
 
 
 def geom_spread_boatwright(hypo_dist_in_km, cutoff_dist_in_km, freqs):
-    """"
+    """
     Geometrical spreading coefficient from Boatwright et al. (2002), eq. 8.
 
     Except that we take the square root of eq. 8, since we correct amplitude
@@ -128,111 +124,6 @@ def geom_spread_boatwright(hypo_dist_in_km, cutoff_dist_in_km, freqs):
     return _boatwright_above_cutoff_dist(freqs, cutoff_dist, dist)
 
 
-def _compute_dtdd(angular_distance, aperture, source_depth_in_km, phase_list):
-    """
-    Compute the local derivative of takeoff angle with respect to angular
-    distance.
-
-    This is used to compute the geometrical spreading coefficient for
-    teleseismic body waves, following Okal (1992), eq. 4.
-
-    :param angular_distance: Angular distance (degrees).
-    :type angular_distance: float
-    :param aperture: Aperture of the ray tube (degrees).
-    :type aperture: float
-    :param source_depth_in_km: Source depth (km).
-    :type source_depth_in_km: float
-    :param phase_list: List of phases.
-    :type phase_list: list of str
-    :return: Local derivative of takeoff angle with respect to angular
-             distance.
-    :rtype: float
-    """
-    distances = np.linspace(
-        angular_distance - aperture, angular_distance + aperture, 3)
-    # pylint: disable=no-member
-    takeoff_angles = np.array([
-        model.get_travel_times(
-            source_depth_in_km, d, phase_list)[0].takeoff_angle
-        for d in distances])
-    return np.gradient(takeoff_angles, distances)[1]
-
-
-def geom_spread_teleseismic(
-        angular_distance, source_depth_in_km, station_depth_in_km, phase):
-    """
-    Calculate geometrical spreading coefficient for teleseismic body waves.
-
-    Implements eq (4) in Okal (1992) for a spherically symmetric Earth.
-    This equations is derived from the conservation of the kinetic energy flux
-    along a ray tube between the source and the receiver.
-
-    :param angular_distance: Angular distance (degrees).
-    :type angular_distance: float
-    :param source_depth_in_km: Source depth (km).
-    :type source_depth_in_km: float
-    :param station_depth_in_km: Station depth (km).
-    :type station_depth_in_km: float
-    :param phase: Phase type (``'P'`` or ``'S'``).
-    :type phase: str
-    :return: Geometrical spreading correction (in m)
-    :rtype: float
-    """
-    # Don't need to specify coordinates, since we use a spherically symmetric
-    # Earth; don't need to specify a config object, since we use the global
-    # model (iasp91)
-    medium_properties_source = MediumProperties(
-        0, 0, source_depth_in_km, None)
-    medium_properties_station = MediumProperties(
-        0, 0, station_depth_in_km, None)
-    if phase == 'P':
-        v_source = medium_properties_source.get_from_taup('vp')
-        v_station = medium_properties_station.get_from_taup('vp')
-        phase_list = ['p', 'P', 'pP', 'sP']
-    elif phase == 'S':
-        v_source = medium_properties_source.get_from_taup('vs')
-        v_station = medium_properties_station.get_from_taup('vs')
-        phase_list = ['s', 'S', 'sS', 'pS']
-    else:
-        raise ValueError(f'Invalid phase: {phase}')
-    rho_source = medium_properties_source.get_from_taup('rho')
-    rho_station = medium_properties_station.get_from_taup('rho')
-    delta = np.deg2rad(angular_distance)
-    arrival = model.get_travel_times(
-        source_depth_in_km, angular_distance, phase_list)[0]
-    # pylint: disable=no-member
-    takeoff_angle = np.deg2rad(arrival.takeoff_angle)
-    incident_angle = np.deg2rad(arrival.incident_angle)
-    # Cmpute the local derivative of the takeoff angle (dt) with respect to the
-    # angular distance (dd, also called the aperture of the ray tube).
-    # We use a finite difference approximation, and we increase the aperture
-    # until we get a non-zero value.
-    # As a first guess, we set the aperture to half the angular distance
-    aperture = angular_distance/2
-    for _ in range(10):
-        dtdd = _compute_dtdd(
-            angular_distance, aperture, source_depth_in_km, phase_list)
-        if dtdd != 0:
-            break
-        aperture *= 2
-    if dtdd == 0:
-        raise ValueError(
-            f'Unable to compute geometrical spreading coefficient for '
-            f'{phase} wave at {angular_distance:.2f} degrees: dt/dd = 0')
-    # we have now all the ingredients to calculate the spreading coefficient,
-    # eq (4) in Okal, 1992
-    spreading_coeff = (
-        (rho_source * v_source) / (rho_station * v_station) *
-        np.sin(takeoff_angle) / np.sin(delta) *
-        1 / np.cos(incident_angle) *
-        np.abs(dtdd)
-    )**0.5
-    earth_radius = 6371e3  # m
-    # We return the inverse of Okal's coefficient, since we use it to correct
-    # the amplitude
-    return earth_radius / spreading_coeff
-
-
 # ------------------------- Plotting functions -------------------------
 
 LINEWIDTH = 2.5
@@ -240,7 +131,11 @@ ZORDER = 0
 
 
 def _append_label_suffix(label, label_suffix):
-    return f'{label} ({label_suffix})' if label_suffix else label
+    if not label_suffix:
+        return label
+    if label.endswith(')') and '(' in label:
+        return f'{label[:-1]}, {label_suffix})'
+    return f'{label} ({label_suffix})'
 
 
 def _plot_r_power_n(ax, x_data, hypo_dists, model_params, label_suffix=''):
@@ -309,7 +204,10 @@ def _plot_teleseismic(ax, x_data, angular_dist, source_depth, model_params,
     # set params['station_depth_in_km'] to 0, if not provided
     params['station_depth_in_km'] = (
         params.get('station_depth_in_km', 0))
-    gst = np.vectorize(geom_spread_teleseismic)
+    # pylint: disable=import-outside-toplevel
+    from sourcespec.ssp_geom_spreading_teleseismic import (
+        geom_spreading_teleseismic)
+    gst = np.vectorize(geom_spreading_teleseismic)
     coeff = gst(angular_dist, source_depth, **params)
     label = _append_label_suffix((
         f'Teleseismic {params["phase"]} '
@@ -363,6 +261,9 @@ def plot_geom_spread_models(source_depth, epi_dists, models=None,
 
         - ``'epi_dist'``: Epicentral distance.
         - ``'hypo_dist'``: Hypocentral distance.
+
+        A secondary x-axis in degrees is added on top of the plot only when
+        ``xaxis='epi_dist'``.
     :type xaxis: str
 
     :param return_fig: If True, return the figure instead of showing it.
@@ -439,13 +340,12 @@ def plot_geom_spread_models(source_depth, epi_dists, models=None,
         models = [('r_power_n', {'exponent': 1})]
 
     print('Computing and plotting geometrical spreading coefficients...')
-    multiple_depths = len(source_depths) > 1
     # pylint: disable=global-statement, invalid-name
     global ZORDER
     for depth in source_depths:
         hypo_dists = np.sqrt(epi_dists**2 + depth**2)
         x_data = epi_dists if xaxis == 'epi_dist' else hypo_dists
-        label_suffix = f'source depth: {depth:g} km' if multiple_depths else ''
+        label_suffix = f'source depth: {depth:g} km'
         for model_name, model_params in models:
             ZORDER += 10
             if model_name == 'r_power_n':
@@ -473,12 +373,17 @@ def plot_geom_spread_models(source_depth, epi_dists, models=None,
     ax.legend()
     ax.set_xlabel(x_label)
     ax.set_ylabel('Geometrical spreading coefficient')
-    if multiple_depths:
-        min_depth = np.min(source_depths)
-        max_depth = np.max(source_depths)
-        ax.set_title(f'Source depths: {min_depth:g}-{max_depth:g} km')
-    else:
-        ax.set_title(f'Source depth: {source_depths[0]:g} km')
+
+    # Add a secondary x-axis in degrees only for epicentral-distance x-axis.
+    if xaxis == 'epi_dist':
+        secax = ax.secondary_xaxis(
+            'top',
+            functions=(
+                lambda km: np.asarray(km) / 111.111,
+                lambda deg: np.asarray(deg) * 111.111,
+            ),
+        )
+        secax.set_xlabel('Epicentral distance (degrees)', labelpad=12)
 
     if return_fig:
         return fig

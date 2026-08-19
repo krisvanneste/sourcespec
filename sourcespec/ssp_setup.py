@@ -605,6 +605,13 @@ def _check_deprecated_config_options(config_obj):
             '   pi_quality_of_fit_min is the minimum acceptable quality of '
             'fit in percent (0-100).\n'
         )
+    if 'geom_spread_min_teleseismic_distance' in config_obj:
+        deprecation_msgs.append(
+            '> "geom_spread_min_teleseismic_distance" config parameter has '
+            'been removed.\n'
+            '   Set "geom_spread_model" to "teleseismic" to use the '
+            'teleseismic geometrical spreading model for all stations.\n'
+        )
     if deprecation_msgs:
         sys.stderr.write(
             'Error: your config file contains deprecated parameters:\n\n')

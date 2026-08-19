@@ -32,7 +32,9 @@ from sourcespec.ssp_util import (
     smooth, cosine_taper, moment_to_mag, MediumProperties)
 from sourcespec.ssp_geom_spreading import (
     geom_spread_r_power_n, geom_spread_r_power_n_segmented,
-    geom_spread_boatwright, geom_spread_teleseismic)
+    geom_spread_boatwright)
+from sourcespec.ssp_geom_spreading_teleseismic import (
+    geom_spreading_teleseismic)
 from sourcespec.ssp_process_traces import filter_trace
 from sourcespec.ssp_correction import station_correction
 from sourcespec.ssp_radiation_pattern import get_radiation_pattern_coefficient
@@ -332,19 +334,14 @@ def _geometrical_spreading_coefficient(config, spec):
     Return the geometrical spreading coefficient for the given spectrum.
     """
     hypo_dist_in_km = spec.stats.hypo_dist
-    epi_dist_in_km = spec.stats.epi_dist
-    # set geometrical spreading distance to a very large value if it is None
-    geom_spread_min_dist = config.geom_spread_min_teleseismic_distance or 1e99
-    geom_spread_model =\
-        'teleseismic' if epi_dist_in_km >= geom_spread_min_dist\
-        else config.geom_spread_model
-    logger.info(f'{spec.id}: geometrical spreading model: {geom_spread_model}')
-    if geom_spread_model == 'teleseismic':
+    logger.info(
+        f'{spec.id}: geometrical spreading model: {config.geom_spread_model}')
+    if config.geom_spread_model == 'teleseismic':
         angular_distance = spec.stats.gcarc
         source_depth_in_km = spec.stats.event.hypocenter.depth.value_in_km
         station_depth_in_km = -spec.stats.coords.elevation
         phase = config.wave_type[0]
-        return geom_spread_teleseismic(
+        return geom_spreading_teleseismic(
             angular_distance, source_depth_in_km, station_depth_in_km, phase)
     if config.geom_spread_model == 'r_power_n':
         exponent = config.geom_spread_n_exponent
