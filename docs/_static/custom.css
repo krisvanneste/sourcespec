@@ -1,3 +1,7 @@
+html {
+    scroll-behavior: smooth;
+}
+
 a.external::after {
     content: "↗";  /* You could also use ↗, ⧉, or a Unicode arrow */
     margin-left: 0.25em;

@@ -50,7 +50,7 @@ The component spectra are combined through the root sum of squares
       }
 
 (This is actually done later in the code, after converting the spectra to
-magnitude units, see below.)
+magnitude units, see :ref:`building_spectra`.)
 
 .. figure:: imgs/example_spectrum.svg
   :alt: Example spectrum plot
@@ -83,8 +83,8 @@ propagation term (geometric and anelastic attenuation of body waves):
 
 where:
 
-- :math:`\mathcal{G}(r)` is the geometrical spreading coefficient (see below)
-  and :math:`r` is the hypocentral distance;
+- :math:`\mathcal{G}(r)` is the geometrical spreading coefficient
+  (see :ref:`geometrical_spreading`), and :math:`r` is the hypocentral distance;
 - :math:`F` is the free surface amplification factor (generally assumed to be
   :math:`2`);
 - :math:`R_{\Theta\Phi}` is the radiation pattern coefficient for P- or S-waves
@@ -101,8 +101,10 @@ where:
 - :math:`t^*` is an attenuation parameter which includes anelastic path
   attenuation (quality factor) and station-specific effects.
 
+.. _geometrical_spreading:
+
 Geometrical spreading
----------------------
+=====================
 
 The geometrical spreading coefficient :math:`\mathcal{G}(r)` accounts for
 amplitude loss with distance and is applied as a multiplicative correction to
@@ -117,6 +119,13 @@ available:
     theoretical value for a body wave propagating in a homogeneous full-space;
     :math:`n=0.5` is the theoretical value for a surface wave propagating in a
     homogeneous half-space.
+* Segmented power-law spreading (``r_power_n_segmented``):
+    A piecewise continuous power law following :cite:t:`AtkinsonBoore1995`
+    and :cite:t:`Boore2003` (eq. 9). The exponents :math:`n` for each segment
+    are specified with the ``geom_spread_n_exponents`` option, and the
+    hypocentral distances defining the start of each segment are specified
+    with the ``geom_spread_n_distances`` option. See
+    :ref:`segmented-power-law-geometrical-spreading` for details.
 * Boatwright geometrical spreading (``boatwright``):
     Following :cite:t:`Boatwright2002`, his model uses :math:`r` spreading for
     hypocentral distances below a user-defined cutoff distance, and
@@ -132,10 +141,61 @@ available:
     :ref:`teleseismic-geometrical-spreading` for details. Note that this model
     may not be appropriate for very deep events.
 
+.. _segmented-power-law-geometrical-spreading:
+
+Segmented power-law geometrical spreading
+-----------------------------------------
+
+Following :cite:t:`AtkinsonBoore1995` and :cite:t:`Boore2003` (eq. 9), the
+geometrical spreading function is defined as a piecewise continuous power law,
+with hinge distances
+:math:`r_0 < r_1 < \dots < r_{N-1}` and exponents
+:math:`n_0, n_1, \dots, n_{N-1}`:
+
+.. math::
+
+  Z(r) =
+  \begin{cases}
+    \left( \frac{r_0}{r} \right)^{n_0} & r_0 \le r \le r_1\\
+    Z(r_1) \left( \frac{r_1}{r} \right)^{n_1} & r_1 \le r \le r_2\\
+    \vdots & \vdots\\
+    Z(r_{N-1}) \left( \frac{r_{N-1}}{r} \right)^{n_{N-1}} & r \ge r_{N-1}
+  \end{cases}
+
+Because ``source_spec`` corrects the observed spectra for the geometrical
+spreading, rather than modeling the attenuation, it applies the inverse
+:math:`1/Z(r)` of the function above. The hinge distances are specified in km
+with the ``geom_spread_n_distances`` option and the exponents with the
+``geom_spread_n_exponents`` option, so that the correction is:
+
+.. math::
+
+  \mathcal{G}(r) =
+  \begin{cases}
+    10^3 \left( \frac{r}{r_0} \right)^{n_0} & r_0 \le r \le r_1\\
+    \mathcal{G}(r_1) \left( \frac{r}{r_1} \right)^{n_1} & r_1 \le r \le r_2\\
+    \vdots & \vdots\\
+    \mathcal{G}(r_{N-1}) \left( \frac{r}{r_{N-1}} \right)^{n_{N-1}} & r \ge r_{N-1}
+  \end{cases}
+
+where :math:`r` is the hypocentral distance and the factor :math:`10^3`
+converts the correction to meters. The number of exponents must equal the
+number of distances, and the distances correspond to the start of each
+segment. No geometrical spreading correction is applied below the smallest
+hinge distance :math:`r_0`, which is typically set to 1 km.
+
+For example, the trilinear model of :cite:t:`AtkinsonBoore1995` uses hinge
+distances of :math:`r_0 = 1`, :math:`r_1 = 70` and :math:`r_2 = 130` km,
+with exponents :math:`n_0 = 1` (body-wave spreading in a homogeneous
+full-space), :math:`n_1 = 0` (a flat intermediate segment), and
+:math:`n_2 = 0.5` (surface-wave spreading in a homogeneous half-space).
+The flat intermediate segment accounts for the reduced amplitude decay of Lg
+waves at regional distances.
+
 .. _boatwright-geometrical-spreading:
 
 Boatwright geometrical spreading
-++++++++++++++++++++++++++++++++
+--------------------------------
 
 Following :cite:t:`Boatwright2002` (eq. 8), the geometrical spreading
 coefficient is defined as:
@@ -167,7 +227,7 @@ amplitude rather than to energy.
 .. _teleseismic-geometrical-spreading:
 
 Teleseismic geometrical spreading
-+++++++++++++++++++++++++++++++++
+---------------------------------
 
 For teleseismic distances, the geometrical spreading coefficient is defined
 following :cite:t:`Okal1992` (eq. 4):
@@ -207,6 +267,8 @@ The teleseismic model assumes a spherically symmetric Earth and is intended
 for teleseismic body waves; when selected, it is applied to all stations for
 which it can be evaluated, with no distance threshold. Its applicability to
 very deep events should be treated with caution.
+
+.. _building_spectra:
 
 Building spectra
 ================
@@ -453,13 +515,13 @@ Following :cite:t:`Boatwright2002` (equation 1) and :cite:t:`Lancieri2012`
             \int_{f_{min}}^{f_{max}} e^{2 \pi f t^*} [\dot{S}^{p|s}(f)]^2 df
 
 where :math:`\mathcal{G}^2(r)` is the squared geometrical spreading coefficient
-(see above), :math:`C` is a constant discussed below, :math:`\rho_r` and
-:math:`c_r` are, respectively, the density and P- or S-wave velocity
-at the receiver (their product is the seismic impedance), :math:`f_{min}` and
-:math:`f_{max}` are the minimum and maximum frequency used to compute the
-energy (see :ref:`configuration_file:Configuration File` for details on the
-``Er_freq_range`` parameter), and the exponential term in the integrand is the
-squared correction for anelastic attenuation.
+(see :ref:`geometrical_spreading`), :math:`C` is a constant discussed below,
+:math:`\rho_r` and :math:`c_r` are, respectively, the density and P- or S-wave
+velocity at the receiver (their product is the seismic impedance),
+:math:`f_{min}` and :math:`f_{max}` are the minimum and maximum frequency used
+to compute the energy (see :ref:`configuration_file:Configuration File` for
+details on the ``Er_freq_range`` parameter), and the exponential term in the
+integrand is the squared correction for anelastic attenuation.
 The double tilde on top of :math:`\tilde{\tilde{E}}_r^{p|s}` means that the
 radiated energy needs to be further corrected for noise and finite bandwidth
 (see below).
