@@ -236,7 +236,8 @@ class StationParameters(OrderedAttribDict):
                  spectral_snratio_mean=None, spectral_snratio_max=None,
                  spectral_snratio_fmin=None, spectral_snratio_fmax=None,
                  rmsn=None, quality_of_fit=None,
-                 ignored=False, ignored_reason=None):
+                 ignored=False, ignored_reason=None,
+                 residuals_corrected=False):
         """Initialize the station parameters object."""
         self.station_id = station_id
         self.instrument_type = instrument_type
@@ -255,6 +256,7 @@ class StationParameters(OrderedAttribDict):
         self.quality_of_fit = quality_of_fit
         self.ignored = ignored
         self.ignored_reason = ignored_reason
+        self.residuals_corrected = residuals_corrected
         # The following parameters are expected to be of type SpectralParameter
         self.Mw = None
         self.fc = None

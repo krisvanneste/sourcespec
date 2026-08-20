@@ -70,7 +70,8 @@ STATIONS_TABLE = OrderedDict([
     ('rmsn', 'REAL'),
     ('quality_of_fit', 'REAL'),
     ('ignored', 'INT'),
-    ('ignored_reason', 'TEXT')
+    ('ignored_reason', 'TEXT'),
+    ('residuals_corrected', 'INT')
 ])
 STATIONS_PRIMARY_KEYS = ['stid', 'evid', 'runid']
 

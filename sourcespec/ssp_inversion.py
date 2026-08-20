@@ -832,7 +832,9 @@ def spectral_inversion(config, spec_st, weight_st):
             fmin=spec.freq_logspaced[0],
             fmax=spec.freq_logspaced[-1],
             ignored=spec.stats.ignore,
-            ignored_reason=getattr(spec.stats, 'ignore_reason', None)
+            ignored_reason=getattr(spec.stats, 'ignore_reason', None),
+            residuals_corrected=getattr(
+                spec.stats, 'residuals_corrected', False)
         )
         sspec_output.station_parameters[station_pars.station_id] = station_pars
         if spec.stats.ignore:

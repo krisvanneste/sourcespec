@@ -220,6 +220,7 @@ def _insert_station_row(cursor, db_file, statId, par, evid, runid):
         'quality_of_fit': getattr(par, 'quality_of_fit', None),
         'ignored': par.ignored,
         'ignored_reason': getattr(par, 'ignored_reason', None),
+        'residuals_corrected': getattr(par, 'residuals_corrected', False),
     }
     columns = list(station_row.keys())
     row = tuple(station_row[col] for col in columns)

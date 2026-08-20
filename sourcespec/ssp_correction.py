@@ -66,6 +66,8 @@ def station_correction(spec_st, config):
         corr_interp.data_mag[corr_interp.freq > freq_max] = np.nan
         # Copy spectrum before correction
         spec_corr = spec.copy()
+        # Mark the spectrum as residuals-corrected
+        spec_corr.stats.residuals_corrected = True
         # Uncorrected spectrum will have component name 'h',
         # while corrected spectrum will have component name 'H'
         spec.stats.channel = f'{spec.stats.channel[:-1]}h'

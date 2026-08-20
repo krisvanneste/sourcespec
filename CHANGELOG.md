@@ -46,6 +46,9 @@ previous versions. You will need to upgrade your old database manually or using
   `spectral_snratio_mean`, `spectral_snratio_max`,
   `spectral_snratio_fmin`, `spectral_snratio_fmax`,
   `rmsn`, `quality_of_fit`, `ignored`, `ignored_reason`
+- New field `residuals_corrected` in the `Stations` table of the SQLite
+  database and in the YAML output, indicating whether the station spectrum
+  has been corrected using station-average residuals
 - New fields in the `Events` table of the SQLite database:
   `n_input_stations`, `n_input_spectra` (renamed from `nobs`),
   `n_spectra_inverted`, `azimuthal_gap_primary`, `azimuthal_gap_secondary`,
