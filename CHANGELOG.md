@@ -102,6 +102,9 @@ previous versions. You will need to upgrade your old database manually or using
   velocity model (see [#79])
 - Possibility of specifying station-specific free-surface amplification factors
   (see [#81] and [#82])
+- Possibility of detecting a high-frequency spectral roll-off on the H spectra
+  (e.g., due to the anti-aliasing filter) and cutting the spectra below it
+  (see config parameters `cut_before_hf_rolloff` and `hf_rolloff_mag`)
 
 ### Inversion
 
@@ -187,6 +190,7 @@ previous versions. You will need to upgrade your old database manually or using
 - Config parameter `free_surface_amplification` now also accepts a list of
   station code patterns with corresponding amplification factors
   (see [#81] and [#82])
+- New config parameters: `cut_before_hf_rolloff`, `hf_rolloff_mag`
 
 ### Bugfixes
 

@@ -133,7 +133,12 @@ Spectral Processing
    ``time_domain_int`` is ``False``.
 
 7. Amplitude spectra are windowed (see config parameters ``freq1_broadb``,
-   ``freq2_broadb`` and similar).
+   ``freq2_broadb`` and similar). If ``cut_before_hf_rolloff`` is ``True``,
+   the H spectra are additionally cut below a high-frequency spectral roll-off
+   detected near their maximum frequency (possibly due to the anti-aliasing
+   filter). A roll-off is detected where the spectrum drops ``hf_rolloff_mag``
+   magnitude units below the local decay trend, and the spectrum is cut
+   before it drops ``0.1 * hf_rolloff_mag``.
 
 8. Geometrical spreading is corrected (see
    :ref:`theoretical_background:Geometrical Spreading`).
