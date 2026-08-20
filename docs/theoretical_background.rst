@@ -147,10 +147,9 @@ Segmented power-law geometrical spreading
 -----------------------------------------
 
 Following :cite:t:`AtkinsonBoore1995` and :cite:t:`Boore2003` (eq. 9), the
-geometrical spreading function is defined as a piecewise continuous power law,
-with hinge distances
-:math:`r_0 < r_1 < \dots < r_{N-1}` and exponents
-:math:`n_0, n_1, \dots, n_{N-1}`:
+geometrical spreading function is defined as a piecewise-continuous power law
+with hinge distances :math:`r_0 < r_1 < \dots < r_{N-1}` and corresponding
+exponents :math:`n_0, n_1, \dots, n_{N-1}`:
 
 .. math::
 
@@ -162,27 +161,41 @@ with hinge distances
     Z(r_{N-1}) \left( \frac{r_{N-1}}{r} \right)^{n_{N-1}} & r \ge r_{N-1}
   \end{cases}
 
-Because ``source_spec`` corrects the observed spectra for the geometrical
-spreading, rather than modeling the attenuation, it applies the inverse
-:math:`1/Z(r)` of the function above. The hinge distances are specified in km
-with the ``geom_spread_n_distances`` option and the exponents with the
-``geom_spread_n_exponents`` option, so that the correction is:
+The function is normalized such that :math:`Z(r_0)=1` and is continuous at
+each hinge distance.
+Note that in the original formulation of :cite:t:`Boore2003`, the first
+exponent :math:`n_0` is fixed to 1, but in ``source_spec`` it can be any
+positive number.
+
+``source_spec`` uses geometrical spreading to correct the observed spectra,
+rather than to model attenuation. It therefore applies the inverse
+:math:`1/Z(r)` of the spreading function. Although :math:`Z(r)` is
+dimensionless, the resulting correction, :math:`\mathcal{G}(r)`, is expressed
+in meters. With hinge distances specified in km through the
+``geom_spread_n_distances`` option and exponents specified through
+``geom_spread_n_exponents``, the correction is:
 
 .. math::
 
   \mathcal{G}(r) =
   \begin{cases}
-    10^3 \left( \frac{r}{r_0} \right)^{n_0} & r_0 \le r \le r_1\\
+    r_\mathrm{norm} \left( \frac{r}{r_0} \right)^{n_0} & r_0 \le r \le r_1\\
     \mathcal{G}(r_1) \left( \frac{r}{r_1} \right)^{n_1} & r_1 \le r \le r_2\\
     \vdots & \vdots\\
     \mathcal{G}(r_{N-1}) \left( \frac{r}{r_{N-1}} \right)^{n_{N-1}} & r \ge r_{N-1}
   \end{cases}
 
-where :math:`r` is the hypocentral distance and the factor :math:`10^3`
-converts the correction to meters. The number of exponents must equal the
-number of distances, and the distances correspond to the start of each
-segment. No geometrical spreading correction is applied below the smallest
-hinge distance :math:`r_0`, which is typically set to 1 km.
+where :math:`r` is the hypocentral distance in km and
+:math:`r_\mathrm{norm} = 10^3\,\mathrm{m}` is a fixed normalization distance.
+
+The number of exponents must equal the number of hinge distances. Each
+distance defines the start of a spreading segment, and its corresponding
+exponent applies from that distance to the next hinge (or indefinitely for
+the final segment).
+
+No geometrical spreading correction is applied for distances below the
+smallest hinge distance, :math:`r_0`. The smallest hinge distance is often
+set to 1 km, but a different value can be chosen.
 
 For example, the trilinear model of :cite:t:`AtkinsonBoore1995` uses hinge
 distances of :math:`r_0 = 1`, :math:`r_1 = 70` and :math:`r_2 = 130` km,
