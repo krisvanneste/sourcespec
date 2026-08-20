@@ -141,6 +141,19 @@ available:
     :ref:`teleseismic-geometrical-spreading` for details. Note that this model
     may not be appropriate for very deep events.
 
+.. warning::
+
+  The geometrical spreading model :math:`\mathcal{G}(r)` directly affects
+  the estimated seismic moment :math:`M_0` and moment magnitude :math:`M_w`.
+  An inappropriate model can introduce a systematic dependence of station
+  :math:`M_w` estimates on hypocentral distance or shift the absolute
+  magnitude scale.
+
+  Users should check the stability of :math:`M_w` with distance and compare
+  event magnitudes, when possible, with independent estimates such as moment
+  tensor solutions.
+
+
 .. _segmented-power-law-geometrical-spreading:
 
 Segmented power-law geometrical spreading
