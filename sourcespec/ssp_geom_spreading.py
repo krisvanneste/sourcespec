@@ -52,6 +52,10 @@ def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
         is_scalar = False
     hinge_distances = np.asarray(hinge_distances)
     Rref = hinge_distances[0]
+    # Boore's eq. 9 defines the attenuation Z(R) as a piecewise power law.
+    # source_spec corrects the spectra for this attenuation, so it needs the
+    # inverse 1/Z(R). Negating the exponents builds that inverse directly
+    # (instead of computing Z(R) and then inverting it).
     exponents = -np.asarray(exponents)
     # Do not allow distances less than Rref
     hypo_dist_in_km = np.maximum(Rref, hypo_dist_in_km)
