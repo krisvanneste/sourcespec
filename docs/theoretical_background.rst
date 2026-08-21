@@ -63,9 +63,78 @@ magnitude units, see :ref:`building_spectra`.)
 Spectral model
 ==============
 
-The Fourier amplitude spectrum of the P- or S-wave displacement in far field
-can be modelled as the product of a source term :cite:p:`Brune1970` and a
-propagation term (geometric and anelastic attenuation of body waves):
+The Fourier amplitude spectrum of far-field P- or S-wave displacement is
+modeled as the product of three modular terms representing the distinct
+physical processes involved: **source generation**, **propagation along the
+wave path**, and **receiver-side amplification**. The source spectral shape
+follows the model of :cite:t:`Brune1970`:
+
+.. math::
+
+   S^{p|s}(f) =
+          \underbrace{
+          \frac{R_{\Theta\Phi} M_O}
+               {4 \pi \rho_h c_h^3}
+          \frac{1}{1+\left(\frac{f}{f^{p|s}_c}\right)^n}
+          }_{\text{Source}(f)}
+          \times
+          \underbrace{
+          \frac{1}{\mathcal{G}(r)}
+          e^{-\pi f t^*}
+          }_{\text{Propagation}(f,r)}
+          \times
+          \underbrace{
+          F \sqrt{\frac{\rho_h c_h}{\rho_r c_r}}
+          }_{\text{Receiver}}
+
+This decomposition isolates the main physical contributions to the observed
+spectrum.
+
+Source term
+-----------
+
+The source term represents the seismic energy and spectral shape generated at
+the hypocenter:
+
+- :math:`M_O` is the seismic moment, which characterizes the earthquake size;
+- :math:`R_{\Theta\Phi}` is the radiation pattern coefficient for P- or
+  S-waves (average or computed from the focal mechanism, if available);
+- :math:`\rho_h` and :math:`c_h` are the medium density and P- or S-wave
+  velocity at the hypocenter, respectively;
+- :math:`f^{p|s}_c` is the source corner frequency for P- or S-waves;
+- :math:`n` is the falloff power of the source spectrum (default is 2 for
+  Brune's source spectrum).
+
+Propagation path term
+---------------------
+
+The propagation term accounts for amplitude changes and energy losses as the
+wave travels through the Earth's crust:
+
+- :math:`\mathcal{G}(r)` is the geometrical spreading coefficient
+  (see :ref:`geometrical_spreading`), where :math:`r` is the hypocentral
+  distance;
+- :math:`t^*` is the attenuation parameter describing anelastic path
+  attenuation (quality factor) and station-specific effects.
+
+Receiver site term
+------------------
+
+The receiver term describes the modification of wave amplitude at the
+receiver:
+
+- :math:`F` is the free surface amplification factor (generally assumed to be
+  :math:`2`);
+- :math:`\sqrt{\frac{\rho_h c_h}{\rho_r c_r}}` is the seismic impedance
+  correction between the hypocenter and the receiver, where :math:`\rho_r`
+  and :math:`c_r` are the medium density and P- or S-wave velocity at the
+  receiver, respectively.
+
+
+Equivalent formulation
+----------------------
+
+Equivalently, the complete spectral model can be written as:
 
 .. math::
 
@@ -79,27 +148,13 @@ propagation term (geometric and anelastic attenuation of body waves):
           \times
           \frac{1}{1+\left(\frac{f}{f^{p|s}_c}\right)^n}
           \times
-          e^{- \pi f t^*}
+          e^{-\pi f t^*}
 
-where:
+This is the formula used internally in ``source_spec``
+(see :ref:`building_spectra`).
+The parameters determined from the spectral inversion are :math:`M_w`,
+:math:`f^{p|s}_c` and :math:`t^*` (see :ref:`inverted_parameters`).
 
-- :math:`\mathcal{G}(r)` is the geometrical spreading coefficient
-  (see :ref:`geometrical_spreading`), and :math:`r` is the hypocentral distance;
-- :math:`F` is the free surface amplification factor (generally assumed to be
-  :math:`2`);
-- :math:`R_{\Theta\Phi}` is the radiation pattern coefficient for P- or S-waves
-  (average or computed from focal mechanism, if available);
-- :math:`\rho_h` and :math:`\rho_r` are the medium densities at the hypocenter
-  and at the receiver, respectively;
-- :math:`c_h` and :math:`c_r` are the P- or S-wave velocities at the hypocenter
-  and at the receiver, respectively;
-- :math:`M_O` is the seismic moment;
-- :math:`f` is the frequency;
-- :math:`f^{p|s}_c` is the corner frequency for P- or S-waves;
-- :math:`n` is the falloff power of the source spectrum (default is 2, for
-  Brune's source spectrum);
-- :math:`t^*` is an attenuation parameter which includes anelastic path
-  attenuation (quality factor) and station-specific effects.
 
 .. _geometrical_spreading:
 
@@ -374,6 +429,7 @@ Finally coming to the following model used for the inversion:
 
 where :math:`M_w \equiv \frac{2}{3} (\log_{10} M_0 - 9.1)`.
 
+.. _inverted_parameters:
 
 Inverted parameters
 ===================
