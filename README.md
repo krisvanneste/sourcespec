@@ -470,7 +470,7 @@ please let me know.
 [docs-link]: https://sourcespec.readthedocs.io/en/latest/?badge=latest
 [changelog-badge]: https://img.shields.io/badge/Changelog-136CB6.svg
 [changelog-link]: https://github.com/SeismicSource/sourcespec/blob/main/CHANGELOG.md
-[DOI-badge]: https://zenodo.org/badge/DOI/10.5281/zenodo.3688587.svg
+[DOI-badge]: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.3688587-blue.svg
 [DOI-link]: https://doi.org/10.5281/zenodo.3688587
 [documentation]: https://sourcespec.readthedocs.io
 [Discussions]: https://github.com/SeismicSource/sourcespec/discussions
