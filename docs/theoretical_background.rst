@@ -138,8 +138,9 @@ available:
     Following :cite:t:`Okal1992`, this model describes the geometrical
     spreading of teleseismic body waves in a spherically symmetric Earth.
     It does not require any additional configuration parameter. See
-    :ref:`teleseismic-geometrical-spreading` for details. Note that this model
-    may not be appropriate for very deep events.
+    :ref:`teleseismic-geometrical-spreading` for details. This model is
+    generally not appropriate for hypocentral distances below 100 km and
+    might not be appropriate for very deep events.
 
 .. warning::
 
