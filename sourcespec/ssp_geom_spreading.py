@@ -54,12 +54,6 @@ def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
         is_scalar = False
     hinge_distances = np.asarray(hinge_distances)
 
-    # Boore's eq. 9 defines the attenuation Z(R) as a piecewise power law.
-    # source_spec corrects the spectra for this attenuation, so it needs the
-    # inverse 1/Z(R). Negating the exponents builds that inverse directly
-    # (instead of computing Z(R) and then inverting it).
-    exponents = -np.asarray(exponents)
-
     # Do not allow distances less than 1st hinge distance
     ## (where relation is undefined)
     hypo_dist_in_km = np.maximum(hinge_distances[0], hypo_dist_in_km)
@@ -75,25 +69,30 @@ def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
 
     ## Determine shifts between segments in log space. These are needed to
     ## obtain same hinge values for segments left and right of each hinge
-    hinge_values_left = hinge_distances[1:] ** exponents[:-1]
-    hinge_values_right = hinge_distances[1:] ** exponents[1:]
+    hinge_values_left = hinge_distances[1:] ** -exponents[:-1]
+    hinge_values_right = hinge_distances[1:] ** -exponents[1:]
     hinge_shifts = np.cumprod(hinge_values_left / hinge_values_right)
 
     ## First segment
     idxs = (hypo_dist <= hinge_distances[1])
-    Z[idxs] = hypo_dist[idxs] ** exponents[0]
+    Z[idxs] = hypo_dist[idxs] ** -exponents[0]
 
     ## Middle segments
     for i in range(1, len(hinge_distances) - 1):
         idxs = (hypo_dist > hinge_distances[i]) & (hypo_dist <= hinge_distances[i+1])
-        Z[idxs] = hinge_shifts[i-1] * (hypo_dist[idxs]) ** exponents[i]
+        Z[idxs] = hinge_shifts[i-1] * (hypo_dist[idxs]) ** -exponents[i]
 
     ## Last segment
     idxs = (hypo_dist > hinge_distances[-1])
-    Z[idxs] = hinge_shifts[-1] * (hypo_dist[idxs]) ** exponents[-1]
+    Z[idxs] = hinge_shifts[-1] * (hypo_dist[idxs]) ** -exponents[-1]
 
     if Rref < hinge_distances[0]:
         Z *= Rref
+
+    # Boore's eq. 9 defines the attenuation Z(R) as a piecewise power law.
+    # source_spec corrects the spectra for this attenuation, so it needs the
+    # inverse 1/Z(R).
+    Z = 1/Z
 
     if is_scalar:
         Z = Z[0]
