@@ -30,17 +30,19 @@ def geom_spread_r_power_n(hypo_dist_in_km, exponent):
 
 
 def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
-                                    hinge_distances):
+                                    hinge_distances, Rref=1E-3):
     """
     Geometrical spreading function defined as piecewise continuous powerlaw,
-    as defined in Boore (2003), eq. 9
+    similar to eq. 9 in Boore (2003), but implemented differently
 
     :param hypo_dist_in_km: Hypocentral distance (km).
     :type hypo_dist_in_km: float
     :param exponents: Exponents for different powerlaw segments
     :type exponents: numpy.ndarray
-    :param hinge_distances: Distances defining start of powerlaw segments
+    :param hinge_distances: Distances defining start of powerlaw segments (km)
     :type hinge_distances: numpy.ndarray
+    :param Rref: Reference distance (km), where geom. spreading = 1
+    :type Rref: float
     :return: Geometrical spreading correction (for distance in m)
     :rtype: float
     """
@@ -51,24 +53,48 @@ def geom_spread_r_power_n_segmented(hypo_dist_in_km, exponents,
         hypo_dist_in_km = np.asarray(hypo_dist_in_km, dtype='float')
         is_scalar = False
     hinge_distances = np.asarray(hinge_distances)
-    Rref = hinge_distances[0]
+
     # Boore's eq. 9 defines the attenuation Z(R) as a piecewise power law.
     # source_spec corrects the spectra for this attenuation, so it needs the
     # inverse 1/Z(R). Negating the exponents builds that inverse directly
     # (instead of computing Z(R) and then inverting it).
     exponents = -np.asarray(exponents)
-    # Do not allow distances less than Rref
-    hypo_dist_in_km = np.maximum(Rref, hypo_dist_in_km)
-    Zhinges = (hinge_distances[:-1] / hinge_distances[1:]) ** exponents[:-1]
-    Zhinges = np.cumprod(Zhinges)
-    R0, p0 = hinge_distances[0], exponents[0]
-    Z = (R0 / hypo_dist_in_km) ** p0
-    for n in range(1, len(hinge_distances)):
-        Rn, pn = hinge_distances[n], exponents[n]
-        idxs = hypo_dist_in_km > Rn
-        Z[idxs] = Zhinges[n - 1] * ((Rn / hypo_dist_in_km[idxs]) ** pn)
-    # Convert spreading correction to metric distance
-    Z *= 1e3
+
+    # Do not allow distances less than 1st hinge distance
+    ## (where relation is undefined)
+    hypo_dist_in_km = np.maximum(hinge_distances[0], hypo_dist_in_km)
+
+    ## Normalize wrt ref. distance (don't use /= to avoid side effects)
+    if Rref > hinge_distances[0]:
+        hypo_dist = hypo_dist_in_km / Rref
+        hinge_distances = hinge_distances / Rref
+    else:
+        hypo_dist = hypo_dist_in_km
+
+    Z = np.ones(len(hypo_dist))
+
+    ## Determine shifts between segments in log space. These are needed to
+    ## obtain same hinge values for segments left and right of each hinge
+    hinge_values_left = hinge_distances[1:] ** exponents[:-1]
+    hinge_values_right = hinge_distances[1:] ** exponents[1:]
+    hinge_shifts = np.cumprod(hinge_values_left / hinge_values_right)
+
+    ## First segment
+    idxs = (hypo_dist <= hinge_distances[1])
+    Z[idxs] = hypo_dist[idxs] ** exponents[0]
+
+    ## Middle segments
+    for i in range(1, len(hinge_distances) - 1):
+        idxs = (hypo_dist > hinge_distances[i]) & (hypo_dist <= hinge_distances[i+1])
+        Z[idxs] = hinge_shifts[i-1] * (hypo_dist[idxs]) ** exponents[i]
+
+    ## Last segment
+    idxs = (hypo_dist > hinge_distances[-1])
+    Z[idxs] = hinge_shifts[-1] * (hypo_dist[idxs]) ** exponents[-1]
+
+    if Rref < hinge_distances[0]:
+        Z *= Rref
+
     if is_scalar:
         Z = Z[0]
     return Z
